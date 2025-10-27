@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="fr" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calculateur de Financement de Campagne</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+        body {
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --bleu-fonce: #111F49;
+            --blanc: #FFFFFF;
+            --bleu-clair: #38B6FF;
+            --bleu-ciel: #F0F7FB;
+            --bleu-ciel-2: #96DDF8;
+        }
+        
+        .calculator-card {
+            transition: all 0.3s ease;
+        }
+        .calculator-card:hover {
+            transform: translateY(-2px);
+        }
+        .result-animation {
+            animation: slideIn 0.5s ease-out;
+        }
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .bg-primary { background-color: var(--bleu-fonce); }
+        .bg-secondary { background-color: var(--bleu-clair); }
+        .bg-light { background-color: var(--bleu-ciel); }
+        .text-primary { color: var(--bleu-fonce); }
+        .text-secondary { color: var(--bleu-clair); }
+        .hover-secondary:hover { background-color: var(--bleu-clair); }
+    </style>
+  <style>@view-transition { navigation: auto; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+  <script src="/_sdk/element_sdk.js" type="text/javascript"></script>
+ </head>
+ <body class="h-full bg-light font-sans">
+  <div class="max-w-4xl mx-auto px-4 py-8">
+   <section>
+    <div class="bg-white rounded-xl shadow-lg p-8 calculator-card">
+     <div class="mb-8">
+      <h2 class="text-3xl font-bold text-primary mb-4">Calculateur de Financement de Campagne</h2>
+      <p class="text-lg text-gray-600">Calculez les plafonds de dépenses électorales et les remboursements possibles selon l'article L52-11 du Code électoral.</p>
+     </div>
+     <form onsubmit="calculateFinancement(event)" class="space-y-6">
+      <div><label for="population-financement" class="block text-lg font-medium text-gray-700 mb-3"> Population de la commune </label> <input type="number" id="population-financement" name="population-financement" min="1" class="w-full px-6 py-4 text-lg border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Ex: 15000" required>
+      </div>
+      <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+       <p class="text-sm text-yellow-800"><strong>Note importante :</strong> Les plafonds de dépenses ne s'appliquent qu'aux communes de plus de 9 000 habitants (Article L52-11 du Code électoral).</p>
+      </div><button type="submit" class="w-full bg-secondary text-white py-4 px-8 rounded-lg font-medium text-lg hover-secondary transition-colors"> Calculer les plafonds de financement </button>
+     </form>
+     <div id="result-financement" class="mt-8 hidden"></div>
+    </div>
+   </section>
+  </div>
+  <script>
+        function calculateFinancement(event) {
+            event.preventDefault();
+            const population = parseInt(document.getElementById('population-financement').value);
+            
+            if (population <= 9000) {
+                const resultDiv = document.getElementById('result-financement');
+                resultDiv.innerHTML = `
+                    <div class="result-animation bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-3">Pas de plafond de dépenses</h3>
+                        <div class="text-center mb-4">
+                            <div class="text-2xl font-bold text-gray-800">Aucune limite</div>
+                            <div class="text-sm text-gray-600">pour les communes de 9 000 habitants ou moins</div>
+                        </div>
+                        <div class="space-y-3 text-gray-800">
+                            <div class="flex justify-between items-center p-2 bg-white rounded">
+                                <span>Population :</span>
+                                <span class="font-bold">${population.toLocaleString()} habitants</span>
+                            </div>
+                            <div class="flex justify-between items-center p-2 bg-white rounded">
+                                <span>Plafond de dépenses :</span>
+                                <span class="font-bold">Aucun</span>
+                            </div>
+                            <div class="flex justify-between items-center p-2 bg-white rounded">
+                                <span>Remboursement État :</span>
+                                <span class="font-bold">Non applicable</span>
+                            </div>
+                        </div>
+                        <div class="mt-3 text-xs text-gray-600">
+                            Base légale : Article L52-11 du Code électoral (communes de plus de 9 000 habitants uniquement)
+                        </div>
+                    </div>
+                `;
+                resultDiv.classList.remove('hidden');
+                return;
+            }
+
+            let plafondPremierTour = 0;
+            let plafondSecondTour = 0;
+            let populationRestante = population;
+
+            const tranche1 = Math.min(populationRestante, 15000);
+            plafondPremierTour += tranche1 * 1.22;
+            plafondSecondTour += tranche1 * 1.68;
+            populationRestante -= tranche1;
+
+            if (populationRestante > 0) {
+                const tranche2 = Math.min(populationRestante, 15000);
+                plafondPremierTour += tranche2 * 1.07;
+                plafondSecondTour += tranche2 * 1.52;
+                populationRestante -= tranche2;
+            }
+
+            if (populationRestante > 0) {
+                const tranche3 = Math.min(populationRestante, 30000);
+                plafondPremierTour += tranche3 * 0.91;
+                plafondSecondTour += tranche3 * 1.22;
+                populationRestante -= tranche3;
+            }
+
+            if (populationRestante > 0) {
+                const tranche4 = Math.min(populationRestante, 40000);
+                plafondPremierTour += tranche4 * 0.84;
+                plafondSecondTour += tranche4 * 1.14;
+                populationRestante -= tranche4;
+            }
+
+            if (populationRestante > 0) {
+                const tranche5 = Math.min(populationRestante, 50000);
+                plafondPremierTour += tranche5 * 0.76;
+                plafondSecondTour += tranche5 * 1.07;
+                populationRestante -= tranche5;
+            }
+
+            if (populationRestante > 0) {
+                const tranche6 = Math.min(populationRestante, 100000);
+                plafondPremierTour += tranche6 * 0.69;
+                plafondSecondTour += tranche6 * 0.84;
+                populationRestante -= tranche6;
+            }
+
+            if (populationRestante > 0) {
+                plafondPremierTour += populationRestante * 0.53;
+                plafondSecondTour += populationRestante * 0.76;
+            }
+
+            plafondPremierTour *= 1.23;
+            plafondSecondTour *= 1.23;
+
+            const remboursementPremierTour = plafondPremierTour * 0.475;
+            const remboursementSecondTour = plafondSecondTour * 0.475;
+
+            const resultDiv = document.getElementById('result-financement');
+            resultDiv.innerHTML = `
+                <div class="result-animation bg-orange-50 border border-orange-200 rounded-lg p-4">
+                    <h3 class="text-lg font-semibold text-orange-900 mb-3">Plafonds de dépenses électorales</h3>
+                    <div class="space-y-3 text-orange-800">
+                        <div class="flex justify-between items-center p-2 bg-white rounded">
+                            <span>Population :</span>
+                            <span class="font-bold">${population.toLocaleString()} habitants</span>
+                        </div>
+                        <div class="p-3 bg-blue-100 rounded">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="font-semibold">Plafond du premier tour :</span>
+                                <span class="font-bold text-blue-800">${Math.round(plafondPremierTour).toLocaleString()} €</span>
+                            </div>
+                            <div class="flex justify-between items-center text-sm">
+                                <span>Remboursement État* :</span>
+                                <span class="font-bold text-blue-700">${Math.round(remboursementPremierTour).toLocaleString()} €</span>
+                            </div>
+                        </div>
+                        <div class="p-3 bg-green-100 rounded">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="font-semibold">Plafond du second tour :</span>
+                                <span class="font-bold text-green-800">${Math.round(plafondSecondTour).toLocaleString()} €</span>
+                            </div>
+                            <div class="flex justify-between items-center text-sm">
+                                <span>Remboursement État* :</span>
+                                <span class="font-bold text-green-700">${Math.round(remboursementSecondTour).toLocaleString()} €</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3 text-xs text-orange-600">
+                        <p>Base légale : Article L52-11 du Code électoral</p>
+                        <p class="mt-1">* Remboursement de 47,5% du plafond, sous condition d'obtenir au moins 5% des suffrages exprimés</p>
+                    </div>
+                </div>
+            `;
+            resultDiv.classList.remove('hidden');
+        }
+    </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'99519e9f757e8f0a',t:'MTc2MTU2MjA5MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
